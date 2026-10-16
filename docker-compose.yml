@@ -1,0 +1,30 @@
+services:
+  server:
+    build: .
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_PATH: /data/forge-space.db
+      STATIC_DIR: /app/web/dist
+      CORS_ORIGINS: "${CORS_ORIGINS:-*}"
+      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_API_KEY: "${LIVEKIT_API_KEY:-devkey}"
+      LIVEKIT_API_SECRET: "${LIVEKIT_API_SECRET:-devsecret}"
+    volumes:
+      - forge-data:/data
+    depends_on:
+      - livekit
+
+  livekit:
+    image: livekit/livekit-server:v1.8
+    command: --dev --bind 0.0.0.0
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret}"
+
+volumes:
+  forge-data:

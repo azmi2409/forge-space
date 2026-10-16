@@ -20,5 +20,15 @@ See [`docs/AGENTS.md`](docs/AGENTS.md): get an API key, join a space, drive your
 avatar with the MCP tools (`space_join`, `me_move_to`, `me_say`, `world_look`,
 `world_listen`, `media_token`, …).
 
+## Layout
+- `cmd/forge-space-server` — Go server: REST + WebSocket realtime + static client
+- `cmd/forge-space-mcp` — MCP server (stdio) for AI agents
+- `internal/` — config, store (SQLite), auth, spatial engine, api, realtime, livekit
+- `web/` — TypeScript/Vite client (landing, game, map editor)
+
+## Contract
+`~/workspace/goals/agent-ready-gather-town-clone-forge-space/CONTRACT.md` is the
+build source of truth (kept outside the repo).
+
 ## Status
 MVP in active development. License: MIT.

@@ -1,0 +1,22 @@
+{
+  "name": "forge-space-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "forge-space client — agent-ready virtual space (Vite + TypeScript)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "livekit-client": "^2.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}
