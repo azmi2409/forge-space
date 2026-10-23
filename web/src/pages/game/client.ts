@@ -32,6 +32,7 @@ import { GameSocket } from '../../net/socket';
 import { MediaManager, type VideoKind } from '../../net/media';
 import { clear, fmtTime, h, isModalOpen, openModal, toast } from '../../ui/dom';
 import { loadDevicePrefs, saveDevicePrefs, type DevicePrefs, type JoinContext } from './join';
+import { Whiteboard, type WhiteboardStrokeInput } from './whiteboard';
 
 const TUTORIAL_KEY = 'forge-space:tutorial:v1';
 const BUBBLE_MS = 3000;
@@ -120,6 +121,7 @@ export class GameClient {
   private camOn: boolean;
   private screenOn = false;
   private ghostOn = false;
+  private activeBoard: { objectId: string; wb: Whiteboard } | null = null;
 
   constructor(app: HTMLElement, ctx: JoinContext) {
     this.app = app;
@@ -259,6 +261,16 @@ export class GameClient {
         break;
       case 'object':
         this.openObjectModal(m.object);
+        break;
+      case 'wb_stroke':
+        if (this.activeBoard && m.object_id === this.activeBoard.objectId) {
+          this.activeBoard.wb.addRemoteStroke(m.stroke);
+        }
+        break;
+      case 'wb_clear':
+        if (this.activeBoard && m.object_id === this.activeBoard.objectId) {
+          this.activeBoard.wb.clearRemote();
+        }
         break;
       case 'error':
         toast(m.message || 'Server error', 'err');
@@ -734,8 +746,10 @@ export class GameClient {
     const body = h('div', { class: 'object-modal' });
     const kindLabel = { note: 'Note', whiteboard: 'Whiteboard', url: 'Link', video: 'Video', poster: 'Poster', portal: 'Portal' }[o.kind];
     body.appendChild(h('p', { class: 'eyebrow', text: kindLabel }));
-    if (o.kind === 'note' || o.kind === 'poster' || o.kind === 'whiteboard') {
-      body.appendChild(h(o.kind === 'whiteboard' ? 'pre' : 'p', { class: 'object-body', text: o.body || '(empty)' }));
+    if (o.kind === 'note' || o.kind === 'poster') {
+      body.appendChild(h('p', { class: 'object-body', text: o.body || '(empty)' }));
+    } else if (o.kind === 'whiteboard') {
+      this.openWhiteboard(o, body);
     } else if (o.kind === 'url') {
       if (o.url) body.appendChild(h('a', { class: 'btn btn-primary', href: o.url, target: '_blank', rel: 'noopener', text: 'Open link ↗' }));
       else body.appendChild(h('p', { class: 'muted', text: 'No URL set on this object.' }));
@@ -756,6 +770,56 @@ export class GameClient {
       body.appendChild(btn);
     }
     const close = openModal(o.title || kindLabel, body);
+  }
+
+  // ------------------------------------------------------- whiteboard v1 ---
+
+  private openWhiteboard(o: SpaceObject, body: HTMLElement): void {
+    const wb = new Whiteboard(body, {
+      onStrokeEnd: (s) => this.sendBoardStroke(o.id, s),
+      onClear: () => this.sendBoardClear(o.id),
+      onDetach: () => {
+        if (this.activeBoard?.wb === wb) this.activeBoard = null;
+      },
+    });
+    this.activeBoard = { objectId: o.id, wb };
+    void this.api
+      .getBoard(o.id)
+      .then(({ strokes }) => {
+        if (this.activeBoard?.wb === wb) wb.loadStrokes(strokes);
+      })
+      .catch((e: unknown) => toast(e instanceof Error ? e.message : 'Could not load whiteboard', 'err'));
+  }
+
+  private sendBoardStroke(objectId: string, s: WhiteboardStrokeInput): void {
+    if (this.socket?.connected) {
+      // Server persists + broadcasts; our echo renders via handleServer (deduped by id).
+      this.socket.sendWbStroke(objectId, s);
+      return;
+    }
+    // WS not ready — fall back to REST; the returned stroke carries the server id.
+    const wb = this.activeBoard?.wb;
+    void this.api
+      .postBoard(objectId, s)
+      .then(({ stroke }) => {
+        if (this.activeBoard?.objectId === objectId) wb?.addRemoteStroke(stroke);
+      })
+      .catch((e: unknown) => toast(e instanceof Error ? e.message : 'Stroke failed', 'err'));
+  }
+
+  private sendBoardClear(objectId: string): void {
+    if (this.socket?.connected) {
+      // Server clears + broadcasts; our echo clears via handleServer.
+      this.socket.sendWbClear(objectId);
+      return;
+    }
+    const wb = this.activeBoard?.wb;
+    void this.api
+      .clearBoard(objectId)
+      .then(() => {
+        if (this.activeBoard?.objectId === objectId) wb?.clearRemote();
+      })
+      .catch((e: unknown) => toast(e instanceof Error ? e.message : 'Clear failed', 'err'));
   }
 
   private onMyAreaChange(areaId: string | null): void {

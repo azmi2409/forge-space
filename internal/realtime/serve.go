@@ -178,13 +178,28 @@ func (h *Hub) RedeemTicket(ticket string) (*store.Participant, error) {
 // ---------- hello ----------
 
 // buildHello assembles the WS hello payload for a participant.
+// If the space runtime was dropped by RefreshSpace, it is reloaded from the
+// store first (otherwise a dial right after an owner edit would fail).
 func (h *Hub) buildHello(pid string) ([]byte, error) {
 	h.mu.Lock()
 	prt, _ := h.findPartLocked(pid)
+	h.mu.Unlock()
 	if prt == nil {
+		p, err := h.store.GetParticipant(pid)
+		if err != nil {
+			return nil, errors.New("unknown participant")
+		}
+		if _, err := h.getSpace(p.SpaceID); err != nil {
+			return nil, err
+		}
+		h.mu.Lock()
+		prt, _ = h.findPartLocked(pid)
 		h.mu.Unlock()
-		return nil, errors.New("unknown participant")
+		if prt == nil {
+			return nil, errors.New("unknown participant")
+		}
 	}
+	h.mu.Lock()
 	p := prt.p
 	rt := h.spaceOfLocked(pid)
 	mrt := rt.maps[p.MapID]
@@ -356,6 +371,41 @@ func (h *Hub) handleClientMessage(pid string, data []byte) {
 		}
 		_ = json.Unmarshal(data, &m)
 		h.sendTo(c, mustJSON(map[string]any{"t": "pong", "at": m.At}))
+	case "wb_stroke":
+		// Whiteboard v1: persist + fanout to same-map participants.
+		var m struct {
+			ObjectID string `json:"object_id"`
+			Stroke   struct {
+				Color  string                  `json:"color"`
+				Width  float64                 `json:"width"`
+				Points []store.WhiteboardPoint `json:"points"`
+			} `json:"stroke"`
+		}
+		if err := json.Unmarshal(data, &m); err != nil || m.ObjectID == "" {
+			h.sendError(pid, "bad_request", "bad wb_stroke message")
+			return
+		}
+		st, mapID, err := h.BoardStroke(pid, m.ObjectID, m.Stroke.Color, m.Stroke.Width, m.Stroke.Points)
+		if err != nil {
+			h.sendError(pid, BoardErrCode(err), err.Error())
+			return
+		}
+		h.FanoutBoardStroke(st, mapID)
+	case "wb_clear":
+		// Whiteboard v1: owner/admin only; clears + fanout.
+		var m struct {
+			ObjectID string `json:"object_id"`
+		}
+		if err := json.Unmarshal(data, &m); err != nil || m.ObjectID == "" {
+			h.sendError(pid, "bad_request", "bad wb_clear message")
+			return
+		}
+		mapID, err := h.BoardClear(pid, m.ObjectID)
+		if err != nil {
+			h.sendError(pid, BoardErrCode(err), err.Error())
+			return
+		}
+		h.FanoutBoardClear(m.ObjectID, mapID)
 	default:
 		h.sendError(pid, "bad_request", "unknown message type "+base.T)
 	}

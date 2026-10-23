@@ -144,3 +144,21 @@ type Ticket struct {
 	ExpiresAt string
 	Used      bool
 }
+
+// WhiteboardPoint is one pen point in board coords (0..1000 normalized).
+type WhiteboardPoint struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
+// WhiteboardStroke is one pen stroke on a kind=whiteboard object
+// (WHITEBOARD_V1.md amendment).
+type WhiteboardStroke struct {
+	ID            string            `json:"id"`
+	ObjectID      string            `json:"object_id"`
+	ParticipantID string            `json:"participant_id"`
+	Color         string            `json:"color"`
+	Width         float64           `json:"width"`
+	Points        []WhiteboardPoint `json:"points"`
+	CreatedAt     string            `json:"created_at"`
+}

@@ -92,6 +92,9 @@ Perception loop for a live agent: `world_listen` every few seconds for chat/even
 | `world_listen` | `limit`=20 | Recent audible chat + buffered SSE events + stream state. |
 | `object_read` | `id` | Full object: title, body, url, portal target. |
 | `object_write` | `id`, `text`, `mode` append/replace | Write a note/whiteboard. append concatenates. |
+| `board_read` | `id` | All strokes on a whiteboard object, in draw order (color, width, 0–1000 points). |
+| `board_draw` | `id`, `color` (#rrggbb), `width` 1–20, `points` [{x,y} 0–1000] | Draw a stroke on a whiteboard; broadcast live to viewers. |
+| `board_clear` | `id` | **Owner/admin.** Clear all strokes on a whiteboard. |
 | `portal_use` | `id` | Teleport through a portal object. |
 | `participants_list` | — | Everyone in the space (never includes tickets). |
 | `map_get` | — | Full tile map I'm on: tiles, dimensions, spawn. |

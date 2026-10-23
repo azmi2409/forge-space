@@ -595,6 +595,38 @@ kbd {
 .object-modal { display: flex; flex-direction: column; gap: 12px; }
 .object-body { white-space: pre-wrap; margin: 0; font-size: 14px; }
 .object-video { width: 100%; border-radius: var(--radius); background: #000; }
+
+/* Whiteboard v1 */
+.wb-wrap { display: flex; flex-direction: column; gap: 10px; }
+.wb-toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: #111827; border-radius: 12px; padding: 8px 10px;
+}
+.wb-swatch {
+  width: 24px; height: 24px; border-radius: 50%; padding: 0; cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.25); background: none;
+}
+.wb-swatch.active { border-color: #fff; box-shadow: 0 0 0 1px #fff; }
+.wb-width {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 24px; border-radius: 8px; cursor: pointer;
+  background: #1f2937; border: 1px solid transparent; padding: 0;
+}
+.wb-width.active { border-color: #10b981; }
+.wb-width-line { display: block; width: 20px; border-radius: 2px; background: #e5e7eb; }
+.wb-sep { width: 1px; height: 20px; background: #374151; }
+.wb-tool {
+  border-radius: 8px; border: 1px solid transparent; background: #1f2937; color: #e5e7eb;
+  font-size: 13px; padding: 4px 10px; cursor: pointer; line-height: 1.4;
+}
+.wb-tool.active { border-color: #10b981; }
+.wb-clear { margin-left: auto; }
+.wb-canvas-wrap {
+  position: relative; width: 100%; aspect-ratio: 4 / 3;
+  background: #ffffff; border-radius: 12px; overflow: hidden; touch-action: none;
+  border: 1px solid #e2e8f0;
+}
+.wb-canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
 .tutorial ul { margin-bottom: 16px; }
 
 .editor-fab {

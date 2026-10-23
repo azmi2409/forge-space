@@ -15,6 +15,8 @@ import type {
   Participant,
   Space,
   SpaceObject,
+  WbPoint,
+  WhiteboardStroke,
 } from '../game/types';
 
 export class ApiError extends Error {
@@ -145,6 +147,20 @@ export class ApiClient {
   }
   async deleteObject(objectId: string): Promise<void> {
     await this.req('DELETE', `/objects/${objectId}`);
+  }
+
+  // --- whiteboard (WHITEBOARD_V1) ---
+  async getBoard(objectId: string): Promise<{ strokes: WhiteboardStroke[] }> {
+    return this.req('GET', `/objects/${objectId}/board`);
+  }
+  async postBoard(
+    objectId: string,
+    stroke: { color: string; width: number; points: WbPoint[] },
+  ): Promise<{ stroke: WhiteboardStroke }> {
+    return this.req('POST', `/objects/${objectId}/board`, stroke);
+  }
+  async clearBoard(objectId: string): Promise<void> {
+    await this.req('DELETE', `/objects/${objectId}/board`);
   }
 
   // --- presence ---

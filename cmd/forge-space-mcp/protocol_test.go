@@ -107,13 +107,14 @@ func TestParseError(t *testing.T) {
 // JSON Schema object with required fields present in properties.
 func TestToolSchemasValid(t *testing.T) {
 	s := newBareServer()
-	if len(s.toolOrder) != 20 {
-		t.Fatalf("expected 20 tools, got %d", len(s.toolOrder))
+	if len(s.toolOrder) != 23 {
+		t.Fatalf("expected 23 tools, got %d", len(s.toolOrder))
 	}
 	wantOrder := []string{
 		"space_list", "space_join", "space_leave", "me_where", "me_move_to",
 		"me_step", "me_say", "me_emote", "me_ghost", "me_speaking", "world_look", "world_listen",
-		"object_read", "object_write", "portal_use", "participants_list",
+		"object_read", "object_write", "board_read", "board_draw", "board_clear",
+		"portal_use", "participants_list",
 		"map_get", "media_token", "admin_broadcast", "admin_kick",
 	}
 	for i, name := range wantOrder {
@@ -165,8 +166,8 @@ func TestToolsList(t *testing.T) {
 	if err := json.Unmarshal(resp, &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if len(out.Result.Tools) != 20 {
-		t.Fatalf("tools/list returned %d tools, want 20", len(out.Result.Tools))
+	if len(out.Result.Tools) != 23 {
+		t.Fatalf("tools/list returned %d tools, want 23", len(out.Result.Tools))
 	}
 	for _, tool := range out.Result.Tools {
 		if tool["name"] == nil || tool["description"] == nil || tool["inputSchema"] == nil {

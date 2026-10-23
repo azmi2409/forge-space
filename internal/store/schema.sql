@@ -132,3 +132,15 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   created_at          TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_chat_space ON chat_messages(space_id, created_at);
+
+-- Whiteboard v1 (WHITEBOARD_V1.md): strokes live on kind=whiteboard objects.
+CREATE TABLE IF NOT EXISTS whiteboard_strokes (
+  id             TEXT PRIMARY KEY,
+  object_id      TEXT NOT NULL REFERENCES objects(id) ON DELETE CASCADE,
+  participant_id TEXT NOT NULL,
+  color          TEXT NOT NULL,
+  width          REAL NOT NULL,
+  points         TEXT NOT NULL,
+  created_at     TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_wb_strokes_object ON whiteboard_strokes(object_id);

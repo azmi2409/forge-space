@@ -2,7 +2,7 @@
  * WebSocket client for the realtime protocol (CONTRACT §4).
  * Message shapes are the contract's — nothing is invented here.
  */
-import type { ChatScope, ClientMsg, ServerMsg } from '../game/types';
+import type { ChatScope, ClientMsg, ServerMsg, WbPoint } from '../game/types';
 
 export class GameSocket {
   private ws: WebSocket | null = null;
@@ -58,6 +58,12 @@ export class GameSocket {
   }
   sendPing(at: number): void {
     this.send({ t: 'ping', at });
+  }
+  sendWbStroke(object_id: string, stroke: { color: string; width: number; points: WbPoint[] }): void {
+    this.send({ t: 'wb_stroke', object_id, stroke });
+  }
+  sendWbClear(object_id: string): void {
+    this.send({ t: 'wb_clear', object_id });
   }
 
   close(): void {

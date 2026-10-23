@@ -18,6 +18,8 @@ const (
 	PrefixTicket      = "tk_"
 	PrefixChatMessage = "cm_"
 	PrefixSession     = "se_"
+	// Whiteboard v1 (WHITEBOARD_V1.md amendment).
+	PrefixWhiteboardStroke = "wbs_"
 )
 
 const base36 = "0123456789abcdefghijklmnopqrstuvwxyz"

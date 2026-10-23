@@ -155,6 +155,25 @@ func (f *fakeForge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, `{"t":"hello"}`)
 	case r.Method == "DELETE" && r.URL.Path == "/api/v1/spaces/sp_abc/participants/pt_x":
 		write(200, map[string]any{})
+	case r.Method == "GET" && r.URL.Path == "/api/v1/objects/ob_wb/board":
+		write(200, map[string]any{"strokes": []any{
+			map[string]any{"id": "wbs_1", "object_id": "ob_wb", "participant_id": "pt_near",
+				"color": "#000000", "width": 3.0,
+				"points": []any{map[string]any{"x": 100.0, "y": 100.0}, map[string]any{"x": 200.0, "y": 200.0}},
+				"created_at": "2026-10-23T10:00:00Z"},
+		}})
+	case r.Method == "POST" && r.URL.Path == "/api/v1/objects/ob_wb/board":
+		var b map[string]any
+		_ = json.Unmarshal(body, &b)
+		write(201, map[string]any{"stroke": map[string]any{
+			"id": "wbs_9", "object_id": "ob_wb", "participant_id": "pt_me",
+			"color": b["color"], "width": b["width"], "points": b["points"],
+			"created_at": "2026-10-23T10:01:00Z"}})
+	case r.Method == "DELETE" && r.URL.Path == "/api/v1/objects/ob_wb/board":
+		write(200, map[string]any{})
+	case r.Method == "DELETE" && r.URL.Path == "/api/v1/objects/ob_locked/board":
+		errResp(403, "forbidden", "owner or admin scope required")
+		return
 	default:
 		errResp(404, "not_found", "no stub for "+r.Method+" "+r.URL.Path)
 	}
@@ -603,6 +622,86 @@ func TestObjectWrite(t *testing.T) {
 	}
 	if n := f.countCalls("PATCH", "/api/v1/objects/ob_note"); n != nBefore {
 		t.Fatal("PATCH called despite bad mode")
+	}
+}
+
+func TestBoardRead(t *testing.T) {
+	_, s := newTestEnv(t)
+	mustJoin(t, s)
+	text, isErr := callTool(t, s, "board_read", map[string]any{"id": "ob_wb"})
+	if isErr {
+		t.Fatalf("board_read failed: %s", text)
+	}
+	out := mustJSON(t, text)
+	strokes, ok := out["strokes"].([]any)
+	if !ok || len(strokes) != 1 {
+		t.Fatalf("strokes = %v", out["strokes"])
+	}
+	st := strokes[0].(map[string]any)
+	if st["id"] != "wbs_1" || st["color"] != "#000000" {
+		t.Fatalf("stroke = %v", st)
+	}
+	// missing id is rejected before any HTTP call
+	if _, isErr := callTool(t, s, "board_read", map[string]any{}); !isErr {
+		t.Fatal("expected error for missing id")
+	}
+}
+
+func TestBoardDraw(t *testing.T) {
+	f, s := newTestEnv(t)
+	mustJoin(t, s)
+	pts := []any{map[string]any{"x": 10.0, "y": 20.0}, map[string]any{"x": 30.0, "y": 40.0}}
+	text, isErr := callTool(t, s, "board_draw", map[string]any{
+		"id": "ob_wb", "color": "#ef4444", "width": 5.0, "points": pts,
+	})
+	if isErr {
+		t.Fatalf("board_draw failed: %s", text)
+	}
+	out := mustJSON(t, text)
+	st, ok := out["stroke"].(map[string]any)
+	if !ok || st["id"] != "wbs_9" {
+		t.Fatalf("stroke = %v", out["stroke"])
+	}
+	call, ok := f.lastCall("POST", "/api/v1/objects/ob_wb/board")
+	if !ok {
+		t.Fatal("POST /api/v1/objects/ob_wb/board not called")
+	}
+	assertBody(t, call, map[string]any{"color": "#ef4444", "width": 5.0, "points": pts})
+	// defaults: color #000000, width 3
+	if _, isErr := callTool(t, s, "board_draw", map[string]any{"id": "ob_wb", "points": pts}); isErr {
+		t.Fatal("board_draw with defaults failed")
+	}
+	call, _ = f.lastCall("POST", "/api/v1/objects/ob_wb/board")
+	assertBody(t, call, map[string]any{"color": "#000000", "width": 3.0, "points": pts})
+	// fewer than 2 points is rejected before any HTTP call
+	nBefore := f.countCalls("POST", "/api/v1/objects/ob_wb/board")
+	if _, isErr := callTool(t, s, "board_draw", map[string]any{
+		"id": "ob_wb", "points": []any{map[string]any{"x": 1.0, "y": 1.0}},
+	}); !isErr {
+		t.Fatal("expected error for single point")
+	}
+	if n := f.countCalls("POST", "/api/v1/objects/ob_wb/board"); n != nBefore {
+		t.Fatal("POST called despite bad points")
+	}
+}
+
+func TestBoardClear(t *testing.T) {
+	f, s := newTestEnv(t)
+	mustJoin(t, s)
+	text, isErr := callTool(t, s, "board_clear", map[string]any{"id": "ob_wb"})
+	if isErr {
+		t.Fatalf("board_clear failed: %s", text)
+	}
+	if _, ok := f.lastCall("DELETE", "/api/v1/objects/ob_wb/board"); !ok {
+		t.Fatal("DELETE /api/v1/objects/ob_wb/board not called")
+	}
+	// 403 from the server surfaces as a tool error (no retry)
+	text, isErr = callTool(t, s, "board_clear", map[string]any{"id": "ob_locked"})
+	if !isErr {
+		t.Fatal("expected error for forbidden clear")
+	}
+	if !strings.Contains(text, "403") && !strings.Contains(text, "forbidden") {
+		t.Fatalf("error should mention 403/forbidden: %s", text)
 	}
 }
 

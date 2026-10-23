@@ -1,7 +1,7 @@
 package main
 
-// All 19 MCP tools (CONTRACT §8), implemented against the REST+SSE shapes of
-// CONTRACT §3 and §7.
+// All 23 MCP tools (CONTRACT §8 + WHITEBOARD_V1.md), implemented against the
+// REST+SSE shapes of CONTRACT §3 and §7.
 
 import (
 	"context"
@@ -229,6 +229,33 @@ func allTools(s *MCPServer) []*Tool {
 				"mode": enumProp("append adds to the existing body, replace overwrites it (default append).", "append", "replace"),
 			}, "id", "text"),
 			Handler: s.toolObjectWrite,
+		},
+		{
+			Name:        "board_read",
+			Description: "Read all strokes on a whiteboard object, in draw order. Each stroke has color, width, and points in normalized 0..1000 board coordinates. Use this to see what humans have drawn.",
+			InputSchema: objSchema(map[string]any{
+				"id": strProp("Whiteboard object id, e.g. ob_xxxxxxxxxxxxxxxx (from world_look)."),
+			}, "id"),
+			Handler: s.toolBoardRead,
+		},
+		{
+			Name:        "board_draw",
+			Description: "Draw a stroke on a whiteboard object. The stroke is persisted and broadcast live to everyone viewing the board. Points are {x,y} in normalized 0..1000 board coordinates — treat the board as a 1000x1000 square.",
+			InputSchema: objSchema(map[string]any{
+				"id":     strProp("Whiteboard object id, e.g. ob_xxxxxxxxxxxxxxxx."),
+				"color":  strProp("Hex color, e.g. #000000 (default #000000)."),
+				"width":  numProp("Stroke width 1..20 (default 3)."),
+				"points": map[string]any{"type": "array", "description": "2..500 points as {x, y} objects in 0..1000 board coordinates.", "items": map[string]any{"type": "object", "properties": map[string]any{"x": map[string]any{"type": "number"}, "y": map[string]any{"type": "number"}}, "required": []string{"x", "y"}}},
+			}, "id", "points"),
+			Handler: s.toolBoardDraw,
+		},
+		{
+			Name:        "board_clear",
+			Description: "Clear all strokes from a whiteboard object. Requires space owner or admin-scope key — a 403 is surfaced as-is, never retried.",
+			InputSchema: objSchema(map[string]any{
+				"id": strProp("Whiteboard object id, e.g. ob_xxxxxxxxxxxxxxxx."),
+			}, "id"),
+			Handler: s.toolBoardClear,
 		},
 		{
 			Name:        "portal_use",
@@ -734,6 +761,96 @@ func (s *MCPServer) toolObjectWrite(ctx context.Context, args json.RawMessage) (
 		return nil, err
 	}
 	return map[string]any{"ok": true, "id": a.ID, "mode": mode}, nil
+}
+
+func (s *MCPServer) toolBoardRead(ctx context.Context, args json.RawMessage) (any, error) {
+	if _, err := s.requireSession(); err != nil {
+		return nil, err
+	}
+	var a struct {
+		ID string `json:"id"`
+	}
+	if err := decodeArgs(args, &a); err != nil {
+		return nil, err
+	}
+	if a.ID == "" {
+		return nil, fmt.Errorf("id is required")
+	}
+	var out struct {
+		Strokes []any `json:"strokes"`
+	}
+	if err := s.client.do(ctx, "GET", "/api/v1/objects/"+esc(a.ID)+"/board", nil, nil, &out); err != nil {
+		return nil, err
+	}
+	if out.Strokes == nil {
+		out.Strokes = []any{}
+	}
+	return map[string]any{"strokes": out.Strokes}, nil
+}
+
+func (s *MCPServer) toolBoardDraw(ctx context.Context, args json.RawMessage) (any, error) {
+	if _, err := s.requireSession(); err != nil {
+		return nil, err
+	}
+	var a struct {
+		ID     string   `json:"id"`
+		Color  *string  `json:"color"`
+		Width  *float64 `json:"width"`
+		Points []struct {
+			X float64 `json:"x"`
+			Y float64 `json:"y"`
+		} `json:"points"`
+	}
+	if err := decodeArgs(args, &a); err != nil {
+		return nil, err
+	}
+	if a.ID == "" {
+		return nil, fmt.Errorf("id is required")
+	}
+	if len(a.Points) < 2 {
+		return nil, fmt.Errorf("points must contain 2..500 entries")
+	}
+	color := "#000000"
+	if a.Color != nil && *a.Color != "" {
+		color = *a.Color
+	}
+	width := 3.0
+	if a.Width != nil {
+		width = *a.Width
+	}
+	pts := make([]any, 0, len(a.Points))
+	for _, p := range a.Points {
+		pts = append(pts, map[string]any{"x": p.X, "y": p.Y})
+	}
+	var out struct {
+		Stroke any `json:"stroke"`
+	}
+	if err := s.client.do(ctx, "POST", "/api/v1/objects/"+esc(a.ID)+"/board", nil,
+		map[string]any{"color": color, "width": width, "points": pts}, &out); err != nil {
+		return nil, err
+	}
+	return map[string]any{"stroke": out.Stroke}, nil
+}
+
+func (s *MCPServer) toolBoardClear(ctx context.Context, args json.RawMessage) (any, error) {
+	if _, err := s.requireSession(); err != nil {
+		return nil, err
+	}
+	var a struct {
+		ID string `json:"id"`
+	}
+	if err := decodeArgs(args, &a); err != nil {
+		return nil, err
+	}
+	if a.ID == "" {
+		return nil, fmt.Errorf("id is required")
+	}
+	// A 403 here means the key lacks owner/admin rights; surfaced as-is, never
+	// retried (same convention as admin_kick).
+	if err := s.client.do(ctx, "DELETE", "/api/v1/objects/"+esc(a.ID)+"/board", nil, nil, nil); err != nil {
+		return nil, err
+	}
+	return map[string]any{"ok": true, "id": a.ID}, nil
 }
 
 func (s *MCPServer) toolPortalUse(ctx context.Context, args json.RawMessage) (any, error) {

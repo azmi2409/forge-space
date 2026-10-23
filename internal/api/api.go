@@ -67,6 +67,11 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("PATCH /api/v1/objects/{id}", s.handlePatchObject)
 	mux.HandleFunc("DELETE /api/v1/objects/{id}", s.handleDeleteObject)
 
+	// whiteboard v1 (WHITEBOARD_V1.md)
+	mux.HandleFunc("GET /api/v1/objects/{id}/board", s.handleGetBoard)
+	mux.HandleFunc("POST /api/v1/objects/{id}/board", s.handleBoardDraw)
+	mux.HandleFunc("DELETE /api/v1/objects/{id}/board", s.handleBoardClear)
+
 	// play
 	mux.HandleFunc("GET /api/v1/spaces/{id}/participants", s.handleListParticipants)
 	mux.HandleFunc("POST /api/v1/spaces/{id}/join", s.handleJoin)

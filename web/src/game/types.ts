@@ -169,7 +169,45 @@ export interface ClientPingMsg {
   at: number;
 }
 
-export type ClientMsg = ClientInputMsg | ClientChatMsg | ClientInteractMsg | ClientPingMsg;
+// --- Whiteboard (WHITEBOARD_V1) ---
+
+export interface WbPoint {
+  /** 0..1000 normalized board coords */
+  x: number;
+  y: number;
+}
+
+export interface WhiteboardStroke {
+  id: string;
+  object_id: string;
+  participant_id: string;
+  /** #rrggbb */
+  color: string;
+  /** 1..20 px */
+  width: number;
+  /** 2..500 points, board coords */
+  points: WbPoint[];
+  created_at: string;
+}
+
+export interface ClientWbStrokeMsg {
+  t: 'wb_stroke';
+  object_id: string;
+  stroke: { color: string; width: number; points: WbPoint[] };
+}
+
+export interface ClientWbClearMsg {
+  t: 'wb_clear';
+  object_id: string;
+}
+
+export type ClientMsg =
+  | ClientInputMsg
+  | ClientChatMsg
+  | ClientInteractMsg
+  | ClientPingMsg
+  | ClientWbStrokeMsg
+  | ClientWbClearMsg;
 
 export interface ServerHelloMsg {
   t: 'hello';
@@ -217,6 +255,17 @@ export interface ServerErrorMsg {
   message: string;
 }
 
+export interface ServerWbStrokeMsg {
+  t: 'wb_stroke';
+  object_id: string;
+  stroke: WhiteboardStroke;
+}
+
+export interface ServerWbClearMsg {
+  t: 'wb_clear';
+  object_id: string;
+}
+
 export type ServerMsg =
   | ServerHelloMsg
   | ServerStateMsg
@@ -224,6 +273,8 @@ export type ServerMsg =
   | ServerChatMsg
   | ServerEventMsg
   | ServerObjectMsg
+  | ServerWbStrokeMsg
+  | ServerWbClearMsg
   | ServerErrorMsg;
 
 export interface ApiErrorBody {
