@@ -3,6 +3,8 @@ services:
     build: .
     ports:
       - "${PORT:-8080}:8080"
+    # WARNING: the devkey/devsecret and CORS_ORIGINS=* defaults are for local dev only.
+    # Set LIVEKIT_API_KEY, LIVEKIT_API_SECRET and CORS_ORIGINS in .env before public deploys.
     environment:
       PORT: "8080"
       DATABASE_PATH: /data/forge-space.db

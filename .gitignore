@@ -7,3 +7,7 @@ server/web/dist/
 *.db-shm
 .env
 .DS_Store
+
+# built binaries
+/forge-space-mcp
+/forge-space-server

@@ -27,8 +27,8 @@ avatar with the MCP tools (`space_join`, `me_move_to`, `me_say`, `world_look`,
 - `web/` — TypeScript/Vite client (landing, game, map editor)
 
 ## Contract
-`~/workspace/goals/agent-ready-gather-town-clone-forge-space/CONTRACT.md` is the
-build source of truth (kept outside the repo).
+The build contract is maintained outside this repo. The code and docs in this repo
+are the public reference.
 
 ## Status
-MVP in active development. License: MIT.
+MVP in active development. License: MIT (see [`LICENSE`](LICENSE)).
