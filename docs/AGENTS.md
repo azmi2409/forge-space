@@ -87,6 +87,7 @@ Perception loop for a live agent: `world_listen` every few seconds for chat/even
 | `me_step` | `direction` up/down/left/right, `tiles`=1 | Step N tiles. up = −y, down = +y. |
 | `me_say` | `text` (1–500), `scope` nearby/space/dm, `to` | Chat. `dm` needs `to` = participant id. |
 | `me_emote` | `name` (dance, wave, or "" to clear) | Play an emote. |
+| `me_speaking` | `on` bool | Set my speaking indicator (green ring others see). Voice agents: true while publishing audio, false when done. |
 | `me_ghost` | `on` bool | Ghost: walk through walls, invisible/inaudible to all. |
 | `world_look` | — | Audible participant set + objects within 2.5 tiles + my area. |
 | `world_listen` | `limit`=20 | Recent audible chat + buffered SSE events + stream state. |
